@@ -39,7 +39,7 @@ export const getJobs = async (req, res) => {
       const jobs = await JobApplication.find(query).sort({ applicationDate: -1 });
 
       if (jobs.length === 0) {
-        return res.status(404).json({ message: 'No jobs found' });
+        return res.status(200).json({ message: 'No jobs found' });
       }
 
       res.json(jobs);
