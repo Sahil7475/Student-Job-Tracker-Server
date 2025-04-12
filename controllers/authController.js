@@ -7,6 +7,7 @@ import { registerSchema, loginSchema } from "../validations/authValidation.js";
 export const register = async (req, res) => {
   try {
     const { error } = registerSchema.validate(req.body);
+
     if (error)
       return res.status(400).json({ error: error.details[0].message });
 
@@ -14,13 +15,19 @@ export const register = async (req, res) => {
 
     const existing = await User.findOne({ email });
     if (existing) {
-      return res.status(400).json({ error: "Email already registered" });
+      return res.status(409).json({ error: "Email already registered" });
     }
 
     const hashed = await bcrypt.hash(password, 10);
-    await User.create({ email, password: hashed });
+    const newUser = await User.create({ email, password: hashed });
 
-    res.status(201).json({ message: "User registered successfully" });
+    
+    const token = jwt.sign({ userId: newUser._id, email:newUser.email }, process.env.JWT_SECRET, {
+      expiresIn: "7d",
+    });
+
+    res.status(201).json({ message: "User registered successfully",token : token });
+
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Server error" });
@@ -38,13 +45,13 @@ export const login = async (req, res) => {
 
     const user = await User.findOne({ email });
     if (!user)
-      return res.status(400).json({ error: "Invalid email or password" });
+      return res.status(401).json({ error: "Invalid email or password" });
 
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch)
-      return res.status(400).json({ error: "Invalid email or password" });
+      return res.status(401).json({ error: "Invalid email or password" });
 
-    const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, {
+    const token = jwt.sign({ userId: user._id, email:user.email }, process.env.JWT_SECRET, {
       expiresIn: "7d",
     });
 

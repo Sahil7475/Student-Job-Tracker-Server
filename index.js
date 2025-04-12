@@ -5,7 +5,7 @@ import cors from 'cors';
 
 import authRoutes from './routes/authRoutes.js';
 import jobRoutes from './routes/jobRoutes.js';
-
+import connectDB from './config/db.js';
 
 dotenv.config();
 
@@ -22,18 +22,14 @@ app.use('/api', jobRoutes);
 
 // Root route
 app.get('/', (req, res) => {
-  res.send('JStudent Job Tracker Is Running');
+  res.send('Student Job Tracker Is Running');
 });
 
 // MongoDB connection
-mongoose
-  .connect(process.env.MONGO_URI)
-  .then(() => {
-    console.log('MongoDB Connected');
-    app.listen(PORT, () =>
-      console.log(`Server running on http://localhost:${PORT}`)
-    );
-  })
-  .catch((err) => {
-    console.error('MongoDB connection failed:', err.message);
+connectDB().then(() => {
+  app.listen(PORT, () => {
+    console.log(`Server running on http://localhost:${PORT}`);
   });
+}).catch((err) => {
+  console.error('Failed to start server due to DB error:', err.message);
+});

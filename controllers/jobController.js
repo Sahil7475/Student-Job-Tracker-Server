@@ -3,6 +3,7 @@ import {jobSchema} from "../validations/jobValidation.js"
 
 export const addJob = async (req, res) => {
     try {
+
       const { error, value } = jobSchema.validate(req.body, { abortEarly: false });
   
       if (error) {
@@ -10,7 +11,11 @@ export const addJob = async (req, res) => {
         return res.status(400).json({ errors: errorMessages });
       }
   
-      const job = new JobApplication(value);
+      const job = new JobApplication({
+        ...value,
+        user: req.user._id,
+      });
+
       const saved = await job.save();
       res.status(201).json(saved);
     } catch (err) {
@@ -20,8 +25,16 @@ export const addJob = async (req, res) => {
 
 
 export const getJobs = async (req, res) => {
+
     const { status, date } = req.query;
-    let query = {};
+
+    const validStatuses = JobApplication.schema.path("status").enumValues;
+
+    if (status && !validStatuses.includes(status)) {
+      return res.status(400).json({ error: `Invalid status: ${status}` });
+    }
+
+    let query = {user: req.user._id};
   
     if (status) query.status = status;
   
@@ -42,7 +55,7 @@ export const getJobs = async (req, res) => {
         return res.status(200).json({ jobs: [] });
       }      
 
-      res.json(jobs);
+      res.status(200).json({ jobs });
     } catch (err) {
       res.status(500).json({ error: err.message });
     }
@@ -53,14 +66,20 @@ export const updateStatus = async (req, res) => {
   const { id } = req.params;
   const { status } = req.body;
 
+  const validStatuses = JobApplication.schema.path("status").enumValues;
+
+  if (!validStatuses.includes(status)) {
+    return res.status(400).json({ error: "Invalid status value" });
+  }
+
   try {
-    const updated = await JobApplication.findByIdAndUpdate(
-      id,
+    const updated = await JobApplication.findOneAndUpdate(
+      { _id: id, user: req.user._id },
       { status },
       { new: true }
     );
     if (!updated) return res.status(404).json({ error: "Job not found" });
-    res.json(updated);
+    res.status(200).json(updated); 
   } catch (err) {
     res.status(400).json({ error: err.message });
   }
@@ -70,9 +89,14 @@ export const deleteJob = async (req, res) => {
   const { id } = req.params;
 
   try {
-    const deleted = await JobApplication.findByIdAndDelete(id);
+    
+    const deleted = await JobApplication.findOneAndDelete({
+      _id: id,
+      user: req.user._id 
+    });
+
     if (!deleted) return res.status(404).json({ error: "Job not found" });
-    res.json({ message: "Job deleted successfully" });
+    res.status(200).json({ message: "Job deleted successfully" });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
