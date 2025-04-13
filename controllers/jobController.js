@@ -8,7 +8,7 @@ export const addJob = async (req, res) => {
   
       if (error) {
         const errorMessages = error.details.map((err) => err.message);
-        return res.status(400).json({ errors: errorMessages });
+        return res.status(400).json({ error: error.details[0].message });
       }
   
       const job = new JobApplication({
